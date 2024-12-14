@@ -1,22 +1,18 @@
 const std = @import("std");
-
-const OpCode = enum {
-    op_return,
-};
-
-const Chunk = std.ArrayList(OpCode);
-
-pub fn disassemble_chunk(chunk: *Chunk) void {
-    for (chunk.items, 0..) |opcode, index| {
-        std.debug.print("{x:0>4} {s}", .{ index, @tagName(opcode) });
-    }
-}
+const debug = @import("debug.zig");
+const Instruction = @import("instruction.zig").Instruction;
+const Chunk = @import("chunk.zig").Chunk;
 
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
+
     var chunk = Chunk.init(allocator);
+    defer chunk.deinit();
 
-    try chunk.append(OpCode.op_return);
+    try chunk.write(Instruction.op_return);
 
-    disassemble_chunk(&chunk);
+    const index = try chunk.add_constant(1.2);
+    try chunk.write(Instruction{ .op_constant = index });
+
+    debug.disassemble_chunk(&chunk);
 }
