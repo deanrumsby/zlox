@@ -1,5 +1,7 @@
 const std = @import("std");
+const ArrayList = std.ArrayList;
 const print = std.debug.print;
+const VM = @import("vm.zig").VM;
 const Chunk = @import("chunk.zig").Chunk;
 const OpCode = @import("opcode.zig").OpCode;
 const Value = @import("value.zig").Value;
@@ -13,18 +15,39 @@ pub fn disassemble_chunk(chunk: *Chunk, name: []const u8) !void {
     }
 }
 
-fn disassemble_instruction(chunk: *Chunk, offset: usize) !usize {
+pub fn print_value(value: Value) void {
+    print("{d}", .{value});
+}
+
+pub fn disassemble_instruction(chunk: *Chunk, offset: usize) !void {
     // print the instruction offset
     print("{x:0>4} ", .{offset});
 
     try print_line_number(chunk, offset);
 
     const opcode: OpCode = @enumFromInt(chunk.code.items[offset]);
-    return switch (opcode) {
+    _ = switch (opcode) {
+        .op_return => print_simple_instruction(offset, opcode),
         .op_constant => try print_constant_instruction(offset, chunk),
         .op_constant_long => try print_constant_instruction(offset, chunk) + 2,
-        .op_return => print_simple_instruction(offset, opcode),
+        .op_negate => print_simple_instruction(offset, opcode),
+        .op_add => print_simple_instruction(offset, opcode),
+        .op_subtract => print_simple_instruction(offset, opcode),
+        .op_multiply => print_simple_instruction(offset, opcode),
+        .op_divide => print_simple_instruction(offset, opcode),
     };
+    print("\n", .{});
+}
+
+pub fn print_stack_contents(stack: *ArrayList(Value)) void {
+    print("[", .{});
+    for (stack.items, 0..) |value, index| {
+        print_value(value);
+        if (index < stack.items.len - 1) {
+            print(", ", .{});
+        }
+    }
+    print("]\n", .{});
 }
 
 fn print_line_number(chunk: *Chunk, offset: usize) !void {
@@ -34,10 +57,6 @@ fn print_line_number(chunk: *Chunk, offset: usize) !void {
     } else {
         print("{d:0>4} ", .{line_number});
     }
-}
-
-fn print_value(value: Value) void {
-    print("{d}", .{value});
 }
 
 fn print_constant_instruction(offset: usize, chunk: *Chunk) !usize {
